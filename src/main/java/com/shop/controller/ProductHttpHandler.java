@@ -1,0 +1,141 @@
+package com.shop.controller;
+
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.Optional;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.shop.model.ApiError;
+import com.shop.model.CreateProductRequest;
+import com.shop.model.Product;
+import com.shop.service.ProductService;
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
+
+public class ProductHttpHandler implements HttpHandler {
+
+    private final ProductService productService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public ProductHttpHandler(ProductService productService) {
+        this.productService = productService;
+    }
+
+    @Override
+    public void handle(HttpExchange exchange) throws IOException {
+        try {
+            String method = exchange.getRequestMethod();
+            String path = exchange.getRequestURI().getPath();
+
+            if (path.equals("/products") && method.equals("POST")) {
+                createProduct(exchange);
+                return;
+            }
+
+            if (path.matches("/products/[^/]+")) {
+                String idPart = path.substring("/products/".length());
+
+                int id;
+                try {
+                    id = Integer.parseInt(idPart);
+                } catch (NumberFormatException e) {
+                    sendJson(exchange, 400,
+                            new ApiError("Product ID must be an integer"));
+                    return;
+                }
+
+                if (method.equals("GET")) {
+                    getProduct(exchange, id);
+                    return;
+                }
+
+                if (method.equals("DELETE")) {
+                    deleteProduct(exchange, id);
+                    return;
+                }
+
+                sendJson(exchange, 405,
+                        new ApiError("Method not allowed"));
+                return;
+            }
+        } catch (IllegalArgumentException e) {
+            sendJson(exchange, 400, new ApiError(e.getMessage()));
+        } catch (SQLException e) {
+            sendJson(exchange, 500,
+                    new ApiError("Internal server error"));
+        } finally {
+            exchange.close();
+        }
+    }
+
+    private void getProduct(HttpExchange exchange, int id)
+            throws IOException, SQLException {
+
+        Optional<Product> product = productService.getProductById(id);
+
+        if (product.isPresent()) {
+            sendJson(exchange, 200, product.get());
+        } else {
+            sendJson(exchange, 404,
+                    new ApiError("Product not found"));
+        }
+    }
+
+    private void createProduct(HttpExchange exchange)
+            throws IOException, SQLException {
+
+        CreateProductRequest request;
+
+        try {
+            request = objectMapper.readValue(
+                    exchange.getRequestBody(),
+                    CreateProductRequest.class);
+        } catch (JsonProcessingException e) {
+            sendJson(exchange, 400,
+                    new ApiError("Invalid JSON request body"));
+            return;
+        }
+
+        Product product = new Product(
+                request.name(),
+                request.price(),
+                request.stockQuantity());
+
+        Product created = productService.createProduct(product);
+
+        exchange.getResponseHeaders().set(
+                "Location", "/products/" + created.getId());
+
+        sendJson(exchange, 201, created);
+    }
+
+    private void deleteProduct(HttpExchange exchange, int id)
+            throws IOException, SQLException {
+
+        boolean deleted = productService.deleteProduct(id);
+
+        if (!deleted) {
+            sendJson(exchange, 404,
+                    new ApiError("Product not found"));
+            return;
+        }
+
+        exchange.sendResponseHeaders(204, -1);
+    }
+
+    private void sendJson(
+            HttpExchange exchange,
+            int statusCode,
+            Object body) throws IOException {
+
+        byte[] response = objectMapper.writeValueAsBytes(body);
+
+        exchange.getResponseHeaders().set(
+                "Content-Type", "application/json; charset=UTF-8");
+
+        exchange.sendResponseHeaders(statusCode, response.length);
+        exchange.getResponseBody().write(response);
+    }
+
+}

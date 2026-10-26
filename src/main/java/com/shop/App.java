@@ -1,45 +1,29 @@
 package com.shop;
 
-import java.math.BigDecimal;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.List;
-import java.util.Optional;
-
-import com.shop.config.DBConfig;
-import com.shop.model.Product;
+import com.shop.controller.ProductHttpHandler;
 import com.shop.repository.ProductRepository;
+import com.shop.service.ProductService;
 
-/**
- * Hello world!
- *
- */
+import com.sun.net.httpserver.HttpServer;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+
 public class App {
-    public static void main(String[] args) throws SQLException {
+    public static void main(String[] args) throws IOException {
+        ProductRepository repository = new ProductRepository();
+        ProductService service = new ProductService(repository);
 
-        ProductRepository pr = new ProductRepository();
+        HttpServer server = HttpServer.create(
+                new InetSocketAddress(4000), 0);
 
-        Product p2 = new Product("Keyboard", new BigDecimal("1499.00"), 20);
+        server.createContext(
+                "/products",
+                new ProductHttpHandler(service));
 
-        pr.save(p2);
+        server.start();
 
-        // Optional<Product> result = pr.findById(1);
-
-        // if (result.isPresent()) {
-        // Product p1 = result.get();
-        // System.out.println(p1);
-        // }
-
-        // Product p3 = result.orElse(p2);
-        // System.out.println(p3);
-
-        // result.map(Product::getId).ifPresent(System.out::println);
-
-        List<Product> products = pr.findAll();
-        System.out.println(products.size());
-
-        List<Product> nextPage = pr.findAll(5, 5);
-        System.out.println(nextPage.size());
+        System.out.println("server started at 4000");
 
     }
 }
