@@ -13,10 +13,11 @@ import java.util.Optional;
 
 public class ProductRepository {
 
-    public void save(Product product) throws SQLException {
+    public int save(Product product) throws SQLException {
         String sql = """
                 INSERT INTO products ( name, price, stock_quantity)
                 VALUES ( ?, ?, ?)
+                RETURNING id
                 """;
 
         try (Connection c1 = DBConfig.getConnection();
@@ -26,7 +27,13 @@ public class ProductRepository {
             statement.setBigDecimal(2, product.getPrice());
             statement.setInt(3, product.getStockQuantity());
 
-            statement.executeUpdate();
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getInt("id");
+                }
+
+                throw new SQLException("Creating product returned no ID");
+            }
         }
 
     }

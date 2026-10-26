@@ -27,11 +27,11 @@ class ProductRepositoryTest {
         ProductRepository repository = new ProductRepository();
         Product product = product("Keyboard");
 
-        repository.save(product);
+        int id = repository.save(product);
 
-        Product saved = findSavedProduct(repository, product.getName());
+        Product saved = repository.findById(id).orElseThrow();
         assertNotNull(saved.getId());
-        assertEquals(product.getName(), repository.findById(saved.getId()).orElseThrow().getName());
+        assertEquals(product.getName(), saved.getName());
     }
 
     @Test
@@ -57,8 +57,7 @@ class ProductRepositoryTest {
     void shouldDeleteProductById() throws SQLException {
         ProductRepository repository = new ProductRepository();
         Product product = product("Keyboard");
-        repository.save(product);
-        int id = findSavedProduct(repository, product.getName()).getId();
+        int id = repository.save(product);
 
         assertTrue(repository.deleteById(id));
         assertTrue(repository.findById(id).isEmpty());
@@ -69,8 +68,7 @@ class ProductRepositoryTest {
     void shouldUpdateExistingProduct() throws SQLException {
         ProductRepository repository = new ProductRepository();
         Product original = product("Keyboard");
-        repository.save(original);
-        int id = findSavedProduct(repository, original.getName()).getId();
+        int id = repository.save(original);
         Product updatedProduct = product("Mechanical Keyboard");
         updatedProduct = new Product(id, updatedProduct.getName(), updatedProduct.getPrice(),
                 updatedProduct.getStockQuantity());
@@ -84,13 +82,6 @@ class ProductRepositoryTest {
         ProductRepository repository = new ProductRepository();
 
         assertFalse(repository.update(product("Keyboard")));
-    }
-
-    private Product findSavedProduct(ProductRepository repository, String name) throws SQLException {
-        Optional<Product> saved = repository.findAll().stream()
-                .filter(product -> product.getName().equals(name))
-                .reduce((first, second) -> second);
-        return saved.orElseThrow();
     }
 
     private Product product(String name) {
