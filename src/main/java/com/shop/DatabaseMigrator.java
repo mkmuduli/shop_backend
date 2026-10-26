@@ -13,6 +13,7 @@ public final class DatabaseMigrator {
         Flyway.configure()
                 .dataSource(DBConfig.getDataSource())
                 .locations("classpath:db/migration")
+                .baselineOnMigrate(true)
                 .load()
                 .migrate();
     }

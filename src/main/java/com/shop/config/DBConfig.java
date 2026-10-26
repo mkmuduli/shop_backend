@@ -35,6 +35,7 @@ public class DBConfig {
         DbCredentials credentials = getDBCredential();
 
         config.setJdbcUrl(credentials.url());
+        config.setDriverClassName("org.postgresql.Driver");
         config.setUsername(credentials.username());
         config.setPassword(credentials.password());
 

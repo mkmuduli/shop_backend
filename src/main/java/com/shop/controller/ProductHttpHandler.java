@@ -24,10 +24,10 @@ public class ProductHttpHandler implements HttpHandler {
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
-        try {
-            String method = exchange.getRequestMethod();
-            String path = exchange.getRequestURI().getPath();
+        String method = exchange.getRequestMethod();
+        String path = exchange.getRequestURI().getPath();
 
+        try {
             if (path.equals("/products") && method.equals("POST")) {
                 createProduct(exchange);
                 return;
@@ -59,11 +59,15 @@ public class ProductHttpHandler implements HttpHandler {
                         new ApiError("Method not allowed"));
                 return;
             }
+
+            sendJson(exchange, 404, new ApiError("Route not found"));
         } catch (IllegalArgumentException e) {
             sendJson(exchange, 400, new ApiError(e.getMessage()));
         } catch (SQLException e) {
             sendJson(exchange, 500,
                     new ApiError("Internal server error"));
+        } catch (RuntimeException e) {
+            sendJson(exchange, 500, new ApiError("Internal server error"));
         } finally {
             exchange.close();
         }
