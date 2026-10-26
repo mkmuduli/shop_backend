@@ -32,6 +32,26 @@
       <artifactId>postgresql</artifactId>
       <version>42.7.7</version>
     </dependency>
+
+    <dependency>
+      <groupId>io.github.cdimascio</groupId>
+      <artifactId>dotenv-java</artifactId>
+      <version>3.2.0</version>
+    </dependency>
+
+    <!-- Flyway core -->
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-core</artifactId>
+      <version>13.11.1</version>
+    </dependency>
+
+    <!-- Flyway PostgreSQL support -->
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-database-postgresql</artifactId>
+      <version>13.11.1</version>
+    </dependency>
   </dependencies>
 
   <build>

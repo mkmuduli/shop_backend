@@ -8,22 +8,28 @@ public class Product {
     private BigDecimal price;
     private int stockQuantity;
 
-    public Product(int id, String name, BigDecimal price, int stockQuantity) {
-
-        if(name == null || name.isEmpty()){
+    public Product(String name, BigDecimal price, int stockQuantity) {
+        if (name == null || name.isEmpty()) {
             throw new IllegalArgumentException("Product name cannot be empty");
         }
-        if(price == null || price.compareTo(BigDecimal.ZERO) < 0){
+        if (price == null || price.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Product price cannot be null or negative");
         }
-        if( stockQuantity < 0){
+        if (stockQuantity < 0) {
             throw new IllegalArgumentException("Stock quantity cannot be negative");
         }
 
-        this.id = id;
         this.name = name;
         this.price = price;
         this.stockQuantity = stockQuantity;
+
+    }
+
+    public Product(int id, String name, BigDecimal price, int stockQuantity) {
+
+        this(name, price, stockQuantity);
+        this.id = id;
+
     }
 
     @Override
@@ -38,5 +44,17 @@ public class Product {
 
     public Integer getId() {
         return this.id;
+    }
+
+    public String getName() {
+        return this.name;
+    }
+
+    public BigDecimal getPrice() {
+        return this.price;
+    }
+
+    public int getStockQuantity() {
+        return this.stockQuantity;
     }
 }
