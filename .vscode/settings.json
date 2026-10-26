@@ -1,4 +1,8 @@
 {
   "editor.formatOnSave": true,
-  "java.configuration.updateBuildConfiguration": "interactive"
+  "java.configuration.updateBuildConfiguration": "interactive",
+  "cSpell.words": [
+    "Dotenv",
+    "Hikari"
+  ]
 }

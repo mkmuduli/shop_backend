@@ -2,76 +2,98 @@ package com.shop.repository;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
+import java.sql.SQLException;
+import java.util.Optional;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.shop.DatabaseMigrator;
 import com.shop.model.Product;
 
 class ProductRepositoryTest {
 
+    @BeforeAll
+    static void setUpDatabase() {
+        DatabaseMigrator.migrate();
+    }
+
     @Test
-    void shouldSaveAndFindProductById() {
+    void shouldSaveAndFindProductById() throws SQLException {
         ProductRepository repository = new ProductRepository();
-        Product product = product(1, "Keyboard");
+        Product product = product("Keyboard");
 
         repository.save(product);
 
-        assertSame(product, repository.findById(1));
+        Product saved = findSavedProduct(repository, product.getName());
+        assertNotNull(saved.getId());
+        assertEquals(product.getName(), repository.findById(saved.getId()).orElseThrow().getName());
     }
 
     @Test
-    void shouldReturnNullWhenProductIdDoesNotExist() {
+    void shouldReturnEmptyWhenProductIdDoesNotExist() throws SQLException {
         ProductRepository repository = new ProductRepository();
 
-        assertNull(repository.findById(99));
+        assertTrue(repository.findById(-1).isEmpty());
     }
 
     @Test
-    void shouldFindAllSavedProducts() {
+    void shouldFindAllSavedProducts() throws SQLException {
         ProductRepository repository = new ProductRepository();
-        Product keyboard = product(1, "Keyboard");
-        Product mouse = product(2, "Mouse");
+        Product keyboard = product("Keyboard");
+        Product mouse = product("Mouse");
         repository.save(keyboard);
         repository.save(mouse);
 
-        assertEquals(2, repository.findAll().size());
-        assertTrue(repository.findAll().contains(keyboard));
-        assertTrue(repository.findAll().contains(mouse));
+        assertTrue(repository.findAll().stream().anyMatch(p -> p.getName().equals(keyboard.getName())));
+        assertTrue(repository.findAll().stream().anyMatch(p -> p.getName().equals(mouse.getName())));
     }
 
     @Test
-    void shouldDeleteProductById() {
+    void shouldDeleteProductById() throws SQLException {
         ProductRepository repository = new ProductRepository();
-        repository.save(product(1, "Keyboard"));
+        Product product = product("Keyboard");
+        repository.save(product);
+        int id = findSavedProduct(repository, product.getName()).getId();
 
-        assertTrue(repository.deleteById(1));
-        assertNull(repository.findById(1));
-        assertFalse(repository.deleteById(1));
+        assertTrue(repository.deleteById(id));
+        assertTrue(repository.findById(id).isEmpty());
+        assertFalse(repository.deleteById(id));
     }
 
     @Test
-    void shouldUpdateExistingProduct() {
+    void shouldUpdateExistingProduct() throws SQLException {
         ProductRepository repository = new ProductRepository();
-        repository.save(product(1, "Keyboard"));
-        Product updatedProduct = product(1, "Mechanical Keyboard");
+        Product original = product("Keyboard");
+        repository.save(original);
+        int id = findSavedProduct(repository, original.getName()).getId();
+        Product updatedProduct = product("Mechanical Keyboard");
+        updatedProduct = new Product(id, updatedProduct.getName(), updatedProduct.getPrice(),
+                updatedProduct.getStockQuantity());
 
         assertTrue(repository.update(updatedProduct));
-        assertSame(updatedProduct, repository.findById(1));
+        assertEquals(updatedProduct.getName(), repository.findById(id).orElseThrow().getName());
     }
 
     @Test
-    void shouldNotUpdateProductThatDoesNotExist() {
+    void shouldNotUpdateProductThatDoesNotExist() throws SQLException {
         ProductRepository repository = new ProductRepository();
 
-        assertFalse(repository.update(product(1, "Keyboard")));
+        assertFalse(repository.update(product("Keyboard")));
     }
 
-    private Product product(int id, String name) {
-        return new Product(id, name, new BigDecimal("1499.00"), 20);
+    private Product findSavedProduct(ProductRepository repository, String name) throws SQLException {
+        Optional<Product> saved = repository.findAll().stream()
+                .filter(product -> product.getName().equals(name))
+                .reduce((first, second) -> second);
+        return saved.orElseThrow();
+    }
+
+    private Product product(String name) {
+        return new Product(name, new BigDecimal("1499.00"), 20);
     }
 }

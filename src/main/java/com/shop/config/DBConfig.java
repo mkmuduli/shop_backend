@@ -1,47 +1,62 @@
 package com.shop.config;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.Properties;
-import io.github.cdimascio.dotenv.Dotenv;
+
+import javax.sql.DataSource;
+
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 
 public class DBConfig {
 
-    private static final Properties properties = new Properties();
-    private static final Dotenv dotenv = Dotenv.load();
-
-    static {
-        try (InputStream input = DBConfig.class
-                .getClassLoader()
-                .getResourceAsStream("application.properties")) {
-            if (input == null) {
-                throw new IllegalStateException(
-                        "application.properties not found");
-            }
-
-            properties.load(input);
-
-        } catch (IOException e) {
-            throw new IllegalStateException(
-                    "Could not load database configuration", e);
-        }
+    private record DbCredentials(String username, String password, String url) {
     }
 
-    public static Connection getConnection() throws SQLException{
-        String url = properties.getProperty("db.url");
-        String username = dotenv.get("DB_USERNAME");
-        String password = dotenv.get("DB_PASSWORD");
+    private static final HikariDataSource DATA_SOURCE = createDataSource();
+
+    public static DbCredentials getDBCredential() {
+        String username = AppConfig.getEnv("DB_USERNAME");
+        String password = AppConfig.getEnv("DB_PASSWORD");
 
         if (username == null || password == null) {
             throw new IllegalStateException(
-                "DB_USERNAME and DB_PASSWORD must be configured"
-            );
+                    "DB_USERNAME and DB_PASSWORD must be configured");
         }
 
-        return DriverManager.getConnection(url, username, password);
+        String url = AppConfig.getProperty("db.url");
+
+        return new DbCredentials(username, password, url);
     }
 
+    public static HikariDataSource createDataSource() {
+        HikariConfig config = new HikariConfig();
+
+        DbCredentials credentials = getDBCredential();
+
+        config.setJdbcUrl(credentials.url());
+        config.setUsername(credentials.username());
+        config.setPassword(credentials.password());
+
+        config.setMaximumPoolSize(5);
+        config.setMinimumIdle(1);
+        config.setPoolName("shop-backend-pool");
+
+        return new HikariDataSource(config);
+    }
+
+    public static Connection getConnection() throws SQLException {
+        return DATA_SOURCE.getConnection();
+    }
+
+    public static void shutdown() {
+        DATA_SOURCE.close();
+    }
+
+    public static DataSource getDataSource() {
+        return DATA_SOURCE;
+    }
+
+    private DBConfig() {
+    }
 }
