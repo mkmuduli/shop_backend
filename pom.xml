@@ -87,9 +87,16 @@
           <artifactId>maven-compiler-plugin</artifactId>
           <version>3.8.0</version>
         </plugin>
+        <!-- surefire lifecycle, see
+        https://maven.apache.org/surefire/maven-surefire-plugin/ -->
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
           <version>3.5.3</version>
+          <configuration>
+            <systemPropertyVariables>
+              <APP_ENV>test</APP_ENV>
+            </systemPropertyVariables>
+          </configuration>
         </plugin>
         <plugin>
           <artifactId>maven-jar-plugin</artifactId>

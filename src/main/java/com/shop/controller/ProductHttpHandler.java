@@ -2,6 +2,8 @@ package com.shop.controller;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -9,11 +11,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.model.ApiError;
 import com.shop.model.CreateProductRequest;
 import com.shop.model.Product;
+import com.shop.model.ProductListResponse;
 import com.shop.service.ProductService;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
 public class ProductHttpHandler implements HttpHandler {
+
+    private static final int DEFAULT_PAGE = 1;
+    private static final int DEFAULT_LIMIT = 20;
 
     private final ProductService productService;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -28,8 +34,19 @@ public class ProductHttpHandler implements HttpHandler {
         String path = exchange.getRequestURI().getPath();
 
         try {
-            if (path.equals("/products") && method.equals("POST")) {
-                createProduct(exchange);
+            if (path.equals("/products")) {
+                if (method.equals("POST")) {
+                    createProduct(exchange);
+                    return;
+                }
+
+                if (method.equals("GET")) {
+                    listProducts(exchange);
+                    return;
+                }
+
+                sendJson(exchange, 405,
+                        new ApiError("Method not allowed"));
                 return;
             }
 
@@ -112,6 +129,53 @@ public class ProductHttpHandler implements HttpHandler {
                 "Location", "/products/" + created.getId());
 
         sendJson(exchange, 201, created);
+    }
+
+    private void listProducts(HttpExchange exchange)
+            throws IOException, SQLException {
+
+        Map<String, String> params = parseQuery(
+                exchange.getRequestURI().getQuery());
+
+        int page = parseIntParam(
+                params.get("page"), "Page", DEFAULT_PAGE);
+        int limit = parseIntParam(
+                params.get("limit"), "Limit", DEFAULT_LIMIT);
+
+        ProductListResponse response = productService.getProducts(page, limit);
+
+        sendJson(exchange, 200, response);
+    }
+
+    private Map<String, String> parseQuery(String query) {
+        Map<String, String> params = new HashMap<>();
+
+        if (query == null || query.isBlank()) {
+            return params;
+        }
+
+        for (String part : query.split("&")) {
+            int eq = part.indexOf('=');
+            if (eq <= 0) {
+                continue;
+            }
+            params.put(part.substring(0, eq), part.substring(eq + 1));
+        }
+
+        return params;
+    }
+
+    private int parseIntParam(String value, String name, int defaultValue) {
+        if (value == null || value.isBlank()) {
+            return defaultValue;
+        }
+
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(
+                    name + " must be an integer");
+        }
     }
 
     private void deleteProduct(HttpExchange exchange, int id)

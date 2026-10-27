@@ -15,16 +15,7 @@ public class AppConfig {
     private static final Set<String> ALLOWED_ENVS = Set.of("dev", "test", "prod");
 
     static {
-        ENV = System.getenv().getOrDefault("APP_ENV", "dev");
-
-        if (ENV == null) {
-            throw new IllegalArgumentException("Please provide the APP_ENV by command line");
-        }
-
-        if (!ALLOWED_ENVS.contains(ENV)) {
-            throw new IllegalArgumentException(
-                    "Invalid environment: " + ENV);
-        }
+        ENV = resolveEnv();
 
         DOTENV = Dotenv.configure()
                 .directory(".")
@@ -49,6 +40,21 @@ public class AppConfig {
 
     public static String getProperty(String key) {
         return properties.getProperty(key);
+    }
+
+    private static String resolveEnv() {
+        String env = System.getProperty("APP_ENV", System.getenv("APP_ENV"));
+
+        if (env == null || env.isBlank()) {
+            env = "dev";
+        }
+
+        if (!ALLOWED_ENVS.contains(env)) {
+            throw new IllegalArgumentException(
+                    "Invalid environment: " + env);
+        }
+
+        return env;
     }
 
     public static String getEnv(String key) {

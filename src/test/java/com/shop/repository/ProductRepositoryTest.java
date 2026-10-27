@@ -3,10 +3,13 @@ package com.shop.repository;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -82,6 +85,34 @@ class ProductRepositoryTest {
         ProductRepository repository = new ProductRepository();
 
         assertFalse(repository.update(product("Keyboard")));
+    }
+
+    @Test
+    void shouldPaginateFindAllByLimitAndOffset() throws SQLException {
+        ProductRepository repository = new ProductRepository();
+        List<Product> all = repository.findAll(10_000, 0);
+
+        List<Product> stitched = new ArrayList<>();
+        for (int offset = 0; offset < all.size(); offset += 2) {
+            stitched.addAll(repository.findAll(2, offset));
+        }
+
+        assertEquals(
+                all.stream().map(Product::getId).toList(),
+                stitched.stream().map(Product::getId).toList());
+        assertTrue(repository.findAll(2, all.size()).isEmpty());
+    }
+
+    @Test
+    void shouldRejectInvalidPaginationArguments() {
+        ProductRepository repository = new ProductRepository();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.findAll(0, 0));
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.findAll(-1, 0));
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.findAll(1, -1));
     }
 
     private Product product(String name) {
